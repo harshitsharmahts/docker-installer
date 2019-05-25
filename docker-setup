@@ -1,3 +1,8 @@
+lsb_release -is > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+	sudo yum install redhat-lsb-core || sudo apt-get install lsb-release
+fi
+
 export OPERATING_SYSTEM=`lsb_release -is | tr [:upper:] [:lower:]`
 export ARCHITECTURE=`uname -m`
 
@@ -31,6 +36,15 @@ function docker_install() {
 	echo "Docker installed!"
 }
 
+function docker_compose_install() {
+	echo "---> Installing docker-compose..."
+	sudo curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+	sudo chmod +x /usr/local/bin/docker-compose
+	echo ""
+	echo "Docker-compose installed!"
+	docker-compose --version
+}
+
 function docker_remove() {
 	if [ "${OPERATING_SYSTEM}" == "centos" ] || [ "${OPERATING_SYSTEM}" == "redhatenterpriseserver" ]; then
 		$REMOVE docker docker-ce docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker logrotate docker-engine
@@ -40,8 +54,7 @@ function docker_remove() {
 }
 
 function install_dependencies() {
-	echo " >>>>> Installing Dependencies..."
-	install_lsb_release;
+	echo "---> Installing Dependencies..."
 	if [ "${OPERATING_SYSTEM}" == "centos" ] || [ "${OPERATING_SYSTEM}" == "redhatenterpriseserver" ]; then
 		$INSTALL unzip \
 			yum-utils \
@@ -58,14 +71,14 @@ function install_dependencies() {
 }
 
 function add_gpg_key() {
-	echo " >>>>> adding GPG key..."
+	echo "---> adding GPG key..."
 	if [ "${OPERATING_SYSTEM}" != "centos" ] && [ "${OPERATING_SYSTEM}" != "redhatenterpriseserver" ]; then
 		curl -fsSL https://download.docker.com/linux/${OPERATING_SYSTEM}/gpg | sudo apt-key add -
 	fi
 }
 
 function setup_stable_repository() {
-	echo " >>>>> setting up stable repository..."
+	echo "---> setting up stable repository..."
 	if [ "${OPERATING_SYSTEM}" == "centos" ] || [ "${OPERATING_SYSTEM}" == "redhatenterpriseserver" ]; then
 		sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 	else
@@ -77,41 +90,28 @@ function setup_stable_repository() {
 }
 
 function install_docker() {
-	echo " >>>>> update..."
+	echo "---> update..."
 	$UPDATE
-	echo " >>>>> installing docker-ce..."
+	echo "---> installing docker-ce..."
 	$INSTALL docker-ce docker-ce-cli containerd.io
 }
 
 function say_hello() {
-	echo " >>>>> hello from docker..."
+	echo "---> hello from docker..."
 	sudo docker run hello-world
 }
 
-function install_lsb_release() {
-	echo "   >>>>> installing lsb_release utility..."
-	lsb_release -is > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-		if [ "${OPERATING_SYSTEM}" == "centos"]	|| [ "${OPERATING_SYSTEM}" == "redhatenterpriseserver" ]; then
-			${INSTALL} redhat-lsb-core 
-		else
-			${INSTALL} lsb-release
-		fi
-	fi
-}
 
 export OPERATION=`echo $1 | tr [:upper:] [:lower:]`
 OPERATION=${OPERATION:-"install"}
 case $OPERATION in
 	install)
-		echo ""
-		echo "operating system : ${OPERATING_SYSTEM}"
-		echo "architecture : `uname -m`"
-		echo ""
 		docker_install
 	;;
+	compose)
+		docker_compose_install
+	;;
 	remove)
-		echo "remove"
 		docker_remove
 	;;
 	*)
