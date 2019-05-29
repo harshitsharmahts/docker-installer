@@ -1,6 +1,23 @@
+#!/bin/bash
+#
+#	@Author: Harshit Sharma
+#	@Email: harshitsharmahts@gmail.com
+#	@Github: harshitsharmahts
+#
+
+function usage() {
+	echo ""
+	echo "Usage: ${0} [mode]"
+	echo ""
+	echo "Supported mode:"
+	echo "  docker		Install docker on your machine."
+	echo "  docker-compose	Install docker-compose on your machine."
+	echo "  remove		Removes the docker from the machine."
+}
+
 lsb_release -is > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-	sudo yum install redhat-lsb-core || sudo apt-get install lsb-release
+	sudo yum -y install redhat-lsb-core || sudo apt-get -y install lsb-release
 fi
 
 export OPERATING_SYSTEM=`lsb_release -is | tr [:upper:] [:lower:]`
@@ -31,6 +48,7 @@ function docker_install() {
 	add_gpg_key
 	setup_stable_repository
 	install_docker
+	post_installation
 	say_hello
 	echo ""
 	echo "Docker installed!"
@@ -96,6 +114,13 @@ function install_docker() {
 	$INSTALL docker-ce docker-ce-cli containerd.io
 }
 
+function post_installation() {
+	sudo usermod -aG docker $USER
+	sudo systemctl stop docker
+	sudo systemctl enable docker
+	sudo systemctl restart docker
+}
+
 function say_hello() {
 	echo "---> hello from docker..."
 	sudo docker run hello-world
@@ -103,18 +128,18 @@ function say_hello() {
 
 
 export OPERATION=`echo $1 | tr [:upper:] [:lower:]`
-OPERATION=${OPERATION:-"install"}
+
 case $OPERATION in
-	install)
+	docker)
 		docker_install
 	;;
-	compose)
+	docker-compose)
 		docker_compose_install
 	;;
 	remove)
 		docker_remove
 	;;
 	*)
-		echo ""
+		usage;
 esac
 
